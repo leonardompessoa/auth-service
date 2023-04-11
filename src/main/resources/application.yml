@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    username: postgres
+    password: postgres
+    url: jdbc:postgresql://localhost:5432/postgres
+    driverClassName: org.postgresql.Driver
+    hikari:
+      schema: public
+  flyway:
+    baseline-on-migrate: true
+
+server:
+  port: 8443
+  ssl:
+    key-store: src/test/resources/certs/local/localhost.p12
+    key-store-password: changeit
+    key-alias: localhost
+    key-password: changeit
+    enabled: true
+    trust-store: src/test/resources/certs/local/truststore.p12
+    trust-store-password: changeit
+    client-auth: need
+jwt:
+  config:
+    signatureAlgorithm: HS512
+    expirationInMillis: 1800000
+    secretKey: jwtSecret

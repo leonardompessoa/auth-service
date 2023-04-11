@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    username: sa
+    password:
+    url: jdbc:hsqldb:mem:testdb;DB_CLOSE_DELAY=-1
+    driverClassName: org.hsqldb.jdbc.JDBCDriver
+    hikari:
+      schema: PUBLIC
+  flyway:
+    enabled: false

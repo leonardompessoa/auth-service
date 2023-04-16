@@ -1,18 +1,16 @@
 spring:
   datasource:
-    username: sa
-    password:
-    url: jdbc:hsqldb:mem:testdb;DB_CLOSE_DELAY=-1
-    driverClassName: org.hsqldb.jdbc.JDBCDriver
+    username: postgres
+    password: ENC(mJ70WkkY6RhvrENgnxlK1/rHMWLnATce92JCDrPsDoAblnXnwkekbnissWNp6qpGd/5EFSBx9zuAEx0BkKOvpUq4vC5ZRz5ZC7dGNJRBJDzKqQWsZVMGYSjYWUkl5csmNZQCdbfPrWhxkFfPr7Xjj2kxdyUTt60RAfeCSt4TrJoPkmR7C6BGHH7fiDkQ484SwJ6Sr0g9mkcdJKn7OeER1wMU4TeKZH0h0EKHON264GOYAetYW/P1VWiU0PyMyjxeYQ26HGdVelETThHwXewOB8Ke7Xk2qSpr78TJ/CMmhEBIDeMXU5wf0NysGr1wqUbja8d149It8o/gsbxbxn3OhQ==)
+    url: jdbc:postgresql://localhost:5432/postgres
+    driverClassName: org.postgresql.Driver
     hikari:
-      schema: PUBLIC
-  flyway:
-    enabled: false
+      schema: public
 
 jasypt:
   encryptor:
     privateKeyLocation: file:src/test/resources/certs/local/private.pem
-    privateKeyFormat: PEM
+
 server:
   ssl:
     key-store: src/test/resources/certs/local/localhost.p12

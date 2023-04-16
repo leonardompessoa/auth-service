@@ -1,30 +1,34 @@
 package com.leonardo.demo.auth.config;
 
-import com.leonardo.demo.auth.filter.BasicToJWTAuthenticationFilter;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder;
-import org.springframework.security.crypto.password.StandardPasswordEncoder;
+import org.springframework.security.crypto.password.*;
 import org.springframework.security.crypto.scrypt.SCryptPasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.provisioning.JdbcUserDetailsManager;
+import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationConverter;
-import org.springframework.security.web.authentication.www.BasicAuthenticationConverter;
-import org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.sql.DataSource;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /*
 *   This configuration class is my take on configuring the SecurityFilterChain without the WebSecurityConfigurerAdapter,
@@ -34,53 +38,31 @@ import java.util.Map;
 *   https://spring.io/blog/2022/02/21/spring-security-without-the-websecurityconfigureradapter
 * */
 @Configuration
+@EnableWebSecurity
 @EnableConfigurationProperties({JWTConfig.class})
 public class AppWebSecurityConfiguration {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http,
-                                    BasicToJWTAuthenticationFilter basicToJWTAuthenticationFilter) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf().disable()
+                .authorizeRequests(auth -> auth.anyRequest().authenticated())
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
-                .exceptionHandling()
-                .authenticationEntryPoint((req, rsp, e) -> rsp.sendError(HttpServletResponse.SC_UNAUTHORIZED))
-                .and()
-                .addFilterAfter(basicToJWTAuthenticationFilter, WebAsyncManagerIntegrationFilter.class)
-                .authorizeRequests(urlRegistry ->
-                        urlRegistry
-                                .antMatchers(HttpMethod.POST, "/login").permitAll()
-                                .anyRequest().authenticated()
-                ).build();
+                .httpBasic(withDefaults())
+                .build();
     }
 
-    /*
-    * Left this piece of code commented to show whoever sees this,
-    * that it is simple to add inMemory user management for test purposes
-    *  NEVER USE THIS IN PRODUCTION
-    *  .inMemoryAuthentication()
-    *       .passwordEncoder(passwordEncoder)
-    *       .withUser(User.builder().username("admin")
-    *       .password("{noop}admin")
-    *       .authorities("LOGIN"))
-    8   .and()
-    *
-    * */
     @Bean
-    AuthenticationManager authenticationManager(HttpSecurity http, DataSource dataSource, PasswordEncoder passwordEncoder)
-            throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class)
-                .jdbcAuthentication()
-                    .dataSource(dataSource)
-                    .passwordEncoder(passwordEncoder)
-                .and()
-                .build();
+    UserDetailsManager userDetailsManager(DataSource dataSource) {
+        return new JdbcUserDetailsManager(dataSource);
     }
 
     // This PasswordEncoder is using the delegatingPasswordEncoder,
     // so we can use more than one encoder, this is important in case you have
     @Bean
+    @SuppressWarnings("deprecation")
     PasswordEncoder passwordEncoder() {
         String idForEncode = "bcrypt";
         Map<String, PasswordEncoder> encoders = new HashMap<>();
@@ -94,13 +76,15 @@ public class AppWebSecurityConfiguration {
     }
 
     @Bean
-    AuthenticationConverter authenticationConverter() {
-        return new BasicAuthenticationConverter();
+    JwtDecoder jwtDecoder(JWTConfig jwtConfig) {
+        return NimbusJwtDecoder.withPublicKey(jwtConfig.getPublicKey()).build();
     }
 
     @Bean
-    BasicToJWTAuthenticationFilter basicToJWTAuthenticationFilter(AuthenticationManager authenticationManager, AuthenticationConverter authenticationConverter, JWTConfig jwtConfig) {
-        return new BasicToJWTAuthenticationFilter(authenticationManager, authenticationConverter, jwtConfig);
+    JwtEncoder jwtEncoder(JWTConfig jwtConfig) {
+        JWK jwk = new RSAKey.Builder(jwtConfig.getPublicKey()).privateKey(jwtConfig.getPrivateKey()).build();
+        JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
+        return new NimbusJwtEncoder(jwks);
     }
 
 }

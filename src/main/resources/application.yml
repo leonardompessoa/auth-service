@@ -1,27 +1,31 @@
 spring:
   datasource:
-    username: postgres
-    password: postgres
-    url: jdbc:postgresql://localhost:5432/postgres
-    driverClassName: org.postgresql.Driver
+    username: ${JDBC_USER}
+    password: ${JDBC_PASSWORD}
+    url: ${JDBC_URL}
+    driverClassName: ${JDBC_DRIVER}
     hikari:
-      schema: public
+      schema: ${JDBC_SCHEMA}
   flyway:
     baseline-on-migrate: true
+
+jasypt:
+  encryptor:
+    privateKeyLocation: ${ENCRYPTOR_KEY}
+    privateKeyFormat: PEM
 
 server:
   port: 8443
   ssl:
-    key-store: src/test/resources/certs/local/localhost.p12
-    key-store-password: changeit
-    key-alias: localhost
-    key-password: changeit
     enabled: true
-    trust-store: src/test/resources/certs/local/truststore.p12
-    trust-store-password: changeit
     client-auth: need
+    key-store: ${KEYSTORE_LOCATION}
+    key-store-password: ${KEYSTORE_PASSWORD}
+    key-alias: ${KEY_ALIAS}
+    key-password: ${KEY_PASSWORD}
+    trust-store: ${TRUSTSTORE_LOCATION}
+    trust-store-password: ${TRUSTSTORE_PASSWORD}
 jwt:
-  config:
-    signatureAlgorithm: HS512
-    expirationInMillis: 1800000
-    secretKey: jwtSecret
+  expirationInMillis: 1800000
+  publicKey: ${JWT_PUBLIC_KEY}
+  privateKey: ${JWT_PRIVATE_KEY}
